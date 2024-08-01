@@ -1,58 +1,49 @@
-Attribute VB_Name = "M41Platt"
 Sub Platt(fname, fpath, XLSpath, XLSname, path, emailmessage)
+    ' Reset Variables
+    emailmessage = ""
+    Fail = 0
+    PossibleError = 0
+    tempsheetoffset = 0
+    docno = ""
 
-'Reset Variables
-emailmessage = ""
-Fail = 0
-possiblerror = 0
-tempsheetoffset = 0
-Possibleerror = 0
-docno = ""
-
-' Prep Temp Sheet
-Call FormatTempSheet
-
-
-'Check if PDF is Order
-If fname Like "*[0-9][0-9][0-9][0-9]_ORDER_[0-9][0-9][0-9][0-9]*" Or _
-    fname Like "ORDER_[0-9][A-Z][0-9][0-9][0-9][0-9][0-9]*" Or _
-    fname Like "ORDER_[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]*" Or _
-    fname Like "* [0-9][A-Z][0-9][0-9][0-9][0-9][0-9] *" And Not fname Like "* PAC *" Then
-    
+    ' Prep Temp Sheet
     Call FormatTempSheet
-    Call Convert_PDF_to_Excel(fname, fpath, XLSpath, XLSname, emailmessage)
-    PDFtype = "Order"
-    Call ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
-    Exit Sub
-End If
 
-'Check if PDF is an Invoice
-If fname Like "*[0-9][0-9][0-9][0-9]_INVOICE_[0-9][0-9][0-9][0-9]*" Then
-    PDFtype = "Invoice"
-    Call FormatTempSheet
-    Call Convert_PDF_to_Excel(fname, fpath, XLSpath, XLSname, emailmessage)
-    Call ProcessPlattInvoicePDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
-    Exit Sub
-End If
+    ' Check if PDF is Order
+    If fname Like "*[0-9][0-9][0-9][0-9]_ORDER_[0-9][0-9][0-9][0-9]*" Or _
+       fname Like "ORDER_[0-9][A-Z][0-9][0-9][0-9][0-9][0-9]*" Or _
+       fname Like "ORDER_[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]*" Or _
+       (fname Like "* [0-9][A-Z][0-9][0-9][0-9][0-9][0-9] *" And Not fname Like "* PAC *") Then
         
-End Sub
-Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
-'fname -> Original PDF file name
-'fpath -> Original PDF file path
-'XLSname - > Converted to excel file name
-'XLSpath -> Converted to excel file path
-'PDFtype -> Invoice or Order
-'path -> Path of the parent folder being scanned, to discern whether this is a submittal scrape or processing invoices
-
-
-'Safegaurd against getting sent here when doing Submittal webscrape
-    If Not UCase(path) Like "*ATTACHMENT*" Then
-        'MsgBox "Inside ProcessPlatt Order Ack module"
-        Call ProcessPlattInvoicePDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
+        Call Convert_PDF_to_Excel(fname, fpath, XLSpath, XLSname, emailmessage)
+        PDFtype = "Order"
+        Call ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
         Exit Sub
     End If
 
-'If order acknowledgement, no need to scrape convert. Immediately route to Webscrape
+    ' Check if PDF is an Invoice
+    If fname Like "*[0-9][0-9][0-9][0-9]_INVOICE_[0-9][0-9][0-9][0-9]*" Then
+        PDFtype = "Invoice"
+        Call Convert_PDF_to_Excel(fname, fpath, XLSpath, XLSname, emailmessage)
+        Call ProcessPlattInvoicePDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
+        Exit Sub
+    End If
+End Sub
+Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmessage)
+    'fname -> Original PDF file name
+    'fpath -> Original PDF file path
+    'XLSname - > Converted to excel file name
+    'XLSpath -> Converted to excel file path
+    'PDFtype -> Invoice or Order
+
+    ' Safeguard against getting sent here when doing Submittal webscrape
+    If Not UCase(path) Like "*ATTACHMENT*" Then
+        'MsgBox "Inside ProcessPlatt Order Ack module"
+        Call ProcessPlattInvoicePDF(fname, fpath, XLSpath, XLSname, PDFtype, emailmessage)
+        Exit Sub
+    End If
+
+    ' If order acknowledgement, no need to scrape convert. Immediately route to Webscrape
     If fname Like "ORDER_[0-9][A-Z][0-9][0-9][0-9][0-9]*" Or _
         fname Like "ORDER_[A-Z][0-9][0-9][0-9][0-9][0-9]*" Then
         docno = Replace(fname, "ORDER_", "")
@@ -62,9 +53,7 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
         GoTo docno:
     End If
 
-
-
-' Platt PDF to Excel Order scrape Macro Data Algorythm
+    ' Platt PDF to Excel Order scrape Macro Data Algorithm
     For xoffset = 1 To 200
         'Assign variable 'line'
         Line = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0)
@@ -74,8 +63,8 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
             Line Like "* [A-Z][0-9][0-9][0-9][0-9][0-9][0-9] *" Then
             If docno = "" Then
                 docno = Line
-                            
-                ' Trim Platt Document number down t 7 characters
+                
+                ' Trim Platt Document number down to 7 characters
                 For Repeat = 1 To Len(docno)
                     If Left(docno, 7) Like "[0-9][A-Z][0-9][0-9][0-9][0-9][0-9]" Or _
                     Left(docno, 7) Like "[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]" Then
@@ -85,10 +74,10 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
                         docno = Right(docno, (Len(docno) - 1))
                     End If
                 Next Repeat
-                            
-                ' Error Check Platt document number is 7 characters of correct formatt
+                
+                ' Error Check Platt document number is 7 characters of correct format
                 If docno Like "*[0-9][A-Z][0-9][0-9][0-9][0-9][0-9]*" Or _
-                                docno Like "*[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]" Then
+                   docno Like "*[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]" Then
                     'do nothing
                 Else
                     ' Message User that found Platt Document number doesn't conform
@@ -97,48 +86,35 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
                     MsgBox "Freeze"
                     MsgBox "Freeze"
                 End If
-                
-                ' Used send to Webscrape if have DocNO, however learned some data like S&H and Tax are only on PDF!
-                'Workbooks(XLSname).Close SaveChanges:=False
-                'Kill XLSpath
-                'GoTo docno:
             End If
         End If
-                    
+        
         ' Order Date
-        If Line Like "DATE *" Then '
+        If Line Like "DATE *" Then
             OrderDate = Mid(Line, 6, 9)
             OrderDate = Replace(OrderDate, "T", "")
             OrderDate = Replace(OrderDate, " ", "")
             'MsgBox "OrderDate=:" & OrderDate & ":"
         End If
         
-        'Delivery Method
-        'If Line Like "*Our Truck*" Then '
-        '    ThisWorkbook.Sheets("Temp").Range("AE2") = "Delivery"
-        'End If
-        'If Line Like "*Will Call*" Then '
-        '    ThisWorkbook.Sheets("Temp").Range("AE2") = "Will Call"
-        'End If
-                
-        'DECO PO#
+        ' DECO PO#
         If Line Like "Phone*" And Not Workbooks(XLSname).Sheets(1).Range("A2").Offset(xoffset, 0) _
-            Like "Dutton*" Then     '                                 <<<DECO PO#
+            Like "Dutton*" Then
             line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset + 1, 0)
             DecoPO = Left(line2, 24)
             DecoPO = Replace(DecoPO, " ", "")
             'MsgBox "decoPO=:" & decoPO & ":"
         End If
-                    
+        
         ' Platt Invoice Number (Or, document number since this is an order acknowledgement)
-        If Line Like "PO BOX 418759*" Then '                        <<<VendorInvoice#
-                        vendorInvoice = Mid(Line, (Len(Line) - 16), 9)
-                        vendorInvoice = Replace(vendorInvoice, " ", "")
-                        'MsgBox "VendorInvoice=:" & VendorInvoice & ":"
+        If Line Like "PO BOX 418759*" Then
+            vendorInvoice = Mid(Line, (Len(Line) - 16), 9)
+            vendorInvoice = Replace(vendorInvoice, " ", "")
+            'MsgBox "VendorInvoice=:" & VendorInvoice & ":"
         End If
-                    
-        'Shipping and Handling
-        If UCase(Line) Like "*SHIP*HANDLING*" Then '
+        
+        ' Shipping and Handling
+        If UCase(Line) Like "*SHIP*HANDLING*" Then
             line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0)
             line2 = Replace(line2, "SHIP/HANDLING", "")
             line2 = Replace(line2, " ", "")
@@ -147,9 +123,9 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
             shipping = line2
             'If Line2 <> "" Then MsgBox "Detected Shipping charges of " & shipping
         End If
-                    
-        'Invoice Total
-        If Line Like "END OF ORDER*" Then '
+        
+        ' Invoice Total
+        If Line Like "END OF ORDER*" Then
             line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset + 1, 0)
             If Not line2 Like "*.*" Then line2 = line2 & ".00"
             If line2 Like "*.[0-9]" Then line2 = line2 & "0"
@@ -157,18 +133,18 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
             'MsgBox "TotalInvoice=:" & Totalinvoice & ":"
         End If
         
-        'Tax
-        If Line Like "END OF ORDER*" Then '
+        ' Tax
+        If Line Like "END OF ORDER*" Then
             line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset - 1, 0)
             Tax = Right(line2, 13)
             Tax = Replace(Tax, " ", "")
             'MsgBox "Tax=:" & Tax & ":"
         End If
     Next xoffset
-            
-' End of Macro Data Scrape
-            
-' Begin Line items Scrape
+    
+    ' End of Macro Data Scrape
+    
+    ' Begin Line items Scrape
     For xoffset = 3 To 200
         ' Assign variable 'Line'
         Line = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0)
@@ -177,31 +153,31 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
         If Line Like "0[0-9][0-9] *" Then
             
             ' Line item description
-            itemDesc = Mid(Line, 24, 29) '
+            itemDesc = Mid(Line, 24, 29)
             'ItemDesc = Replace(ItemDesc, " ", "")
             'MsgBox "ItemDesc=:" & ItemDesc & ":"
             
             ' Check for line item Description error
-            If itemDesc = "" Then Possibleerror = Possibleerror + 1
+            If itemDesc = "" Then PossibleError = PossibleError + 1
             
             ' Unit
-            Unit = Mid(Line, 53, 2) '
+            Unit = Mid(Line, 53, 2)
             Unit = Replace(Unit, " ", "")
             If Unit = "FT" Then Unit = "EA"
             'MsgBox "Unit=:" & Unit & ":"
             
             ' Quantity
-            Quantity = Mid(Line, 58, 7) '
+            Quantity = Mid(Line, 58, 7)
             Quantity = Replace(Quantity, " ", "")
             'MsgBox "Quantity=:" & Quantity & ":"
             
             ' Shipped Quantity
-            SHIP = Mid(Line, 65, 7) '
+            SHIP = Mid(Line, 65, 7)
             SHIP = Replace(SHIP, " ", "")
             'MsgBox "Shipped=:" & Ship & ":"
             
             ' Per Unit Price
-            unitprice = Mid(Line, 79, 11) '
+            unitprice = Mid(Line, 79, 11)
             unitprice = Replace(unitprice, " ", "")
             If Unit = "C" Then
                 If unitprice = "" Then unitprice = 0
@@ -215,7 +191,7 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
             ' MsgBox "UnitPrice=:" & UnitPrice & ":"
             
             ' Line price total
-            lineprice = Right(Line, 10) '
+            lineprice = Right(Line, 10)
             lineprice = Replace(lineprice, " ", "")
             If SHIP = 0 Then lineprice = unitprice * Quantity
             
@@ -237,18 +213,18 @@ Sub ProcessPlattOrderPDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailmes
         End If
     Next xoffset
 
-'MsgBox "Done scraping PDF sheet data"
+    'MsgBox "Done scraping PDF sheet data"
 
-' Close and kill XLS
+    ' Close and kill XLS
     Workbooks(XLSname).Close SaveChanges:=False
     Kill XLSpath
 
-' Error check and common fixes
+    ' Error check and common fixes
     Call SelfHealTempPage
 
-'Check if PO conforms before bothering to Enter
+    'Check if PO conforms before bothering to Enter
     TargetPO = ThisWorkbook.Sheets("Temp").Range("A2")
-         
+             
 docno:
 ' If successfully fetched Platt DocNo, then Webscrape
     If docno <> "" Then
@@ -290,7 +266,7 @@ docno:
         MsgBox "File was Shop PO, returned to Platt module"
     End If
 
-    If Found = 1 And Possibleerror < 1 Then 'Good TargetPO and no errors
+    If Found = 1 And PossibleError < 1 Then 'Good TargetPO and no errors
         Call ClickOnSage
         xoffset = 0
         Call SageEnterPOfromTEMP(xoffset, emailmessage)
@@ -365,116 +341,79 @@ Sub ProcessPlattInvoicePDF(fname, fpath, XLSpath, XLSname, PDFtype, path, emailm
 'MsgBox "at platt ProcessPlattInvoicePDF(fname, fpath, XLSpath, XLSname, PDFtype, path)"
 
 
-For xoffset = 1 To 200 'Gather Macro Information
+For xoffset = 1 To 200 ' Gather Macro Information
     Line = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0)
-    'MsgBox xoffset + 2
-    'MsgBox Line
-
-        ' Platt Document Number
-        If Line Like "*[0-9][A-Z][0-9][0-9][0-9][0-9][0-9]*" Or _
-           Line Like "[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]" Then
-           If docno = "" Then
-                docno = Line
-                'DocNo = Replace(DocNo, "PO BOX 418759", "")
-                'DocNo = Replace(DocNo, "3620 McDougall Ave", "")
-                docno = Replace(docno, " ", "")
-                vendorInvoice = docno
-                
-                'Error check
-                If docno Like "*ORIGINAL*" Then
-                    For Repeat = 1 To 100
-                        'MsgBox "Platt Doc no is this oriringal doc number thing, break to investigate"
-                    Next Repeat
-                End If
-                
-            End If
-        End If
-        
-        ' Remove lines with problematic values
-        'MsgBox "Line ->" & Line & " at xoffset->" & xoffset
-        If Line = "#VALUE!" Then
-            Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0) = ""
-            Line = "nothing"
-            'MsgBox "converted line"
-        End If
-        
-        'Order and Invoce Dates
-        If Line Like "*/*/*/*/*" Then
-            line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset - 2, 0)
-            InvoiceDate = line2
-            'MsgBox "InvoiceDate=:" & InvoiceDate & ":"
-            OrderDate = Left(Line, 9)
-            OrderDate = Replace(OrderDate, "T", "")
-            OrderDate = Replace(OrderDate, " ", "")
-            'MsgBox "OrderDate=:" & OrderDate & ":"
-            If InvoiceDate = "" Or Not InvoiceDate Like "*/*/*" Then
-                'MsgBox "can't parse invoice date, replace invoice date with order date"
-            InvoiceDate = OrderDate
-            End If
-        End If
-        
-        ' DECO PO#
-        If Line Like "*/*/*/*/*" Then     '
-            DecoPO = Right(Line, 20)
-            DecoPO = Replace(DecoPO, " ", "")
-            If DecoPO = "" Then MsgBox "Error, decoPO=:" & DecoPO & ":"
-            If DecoPO = "" Then Possibleerror = Possibleerror + 1
-        End If
-        
-        ' vendor Invoice Number (commented out because vencor invoice number is same as docno)
-        'If Len(Line) = 7 And Line Like "*[0-9][0-9][0-9][0-9]*" And Not Line Like "*.*" Then
-        '    VendorInvoiceNo = Line
-        '    VendorInvoiceNo = Replace(VendorInvoiceNo, " ", "")
-        '    'MsgBox "VendorInvoice=:" & VendorInvoice & ":"
-        '    If vendorInvoice = "" Then Possibleerror = Possibleerror + 1
-        'End If
-        
-        ' Shipping and Handling
-        If UCase(Line) Like "*SHIP*HANDLING*" Then '
-            line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0)
-            line2 = Replace(line2, "SHIP/HANDLING", "")
-            line2 = Replace(line2, " ", "")
-            If Not line2 Like "*.*" Then line2 = line2 & ".00"
-            If line2 Like "*.[0-9]" Then line2 = line2 & "0"
-            shipping = line2
-            'If Line2 <> "" Then MsgBox "Detected Shipping charges of " & shipping
-        End If
-        
-        ' Total Invoice Amount
-        If Line Like "Pay Online /*" Then '
-            For Repeat = 1 To 5
-                line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset + Repeat, 0)
-                If line2 Like "*[0-9]*" Then
-                    If Not line2 Like "*.*" Then line2 = line2 & ".00"
-                    If line2 Like "*.[0-9]" Then line2 = line2 & "0"
-                    TotalInvoice = line2
-                End If
-            Next Repeat
-            
-            'MsgBox "TotalInvoice=:" & TotalInvoice & ":"
-            'Refine / filter Total Invoice
     
-            If Len(TotalInvoice) > 8 Or TotalInvoice Like "*[a-zA-Z]*" Then
-                'MsgBox "TotalInvoice needs filtering, it is:" & TotalInvoice & ":" & _
-                'Chr(13) & "Setting total invoice to 0.00 and will go webscrape"
-                TotalInvoice = "0.00"
-                'MsgBox "Freeze"
-                'MsgBox "Freeze"
-                'MsgBox "Freeze"
-                'MsgBox "Freeze"
-                'MsgBox "Freeze"
-                
-            End If
+    ' Platt Document Number
+    If Line Like "*[0-9][A-Z][0-9][0-9][0-9][0-9][0-9]*" Or _
+       Line Like "[A-Z][0-9][0-9][0-9][0-9][0-9][0-9]" Then
+        If docno = "" Then
+            docno = Replace(Line, " ", "")
+            vendorInvoice = docno
             
+            ' Error check
+            If docno Like "*ORIGINAL*" Then
+                MsgBox "Platt Doc no is an original document number. Please investigate."
+            End If
         End If
+    End If
+    
+    ' Remove lines with problematic values
+    If Line = "#VALUE!" Then
+        Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset, 0) = ""
+        Line = "nothing"
+    End If
+    
+    ' Order and Invoice Dates
+    If Line Like "*/*/*/*/*" Then
+        line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset - 2, 0)
+        InvoiceDate = line2
+        OrderDate = Replace(Replace(Left(Line, 9), "T", ""), " ", "")
         
-        ' Tax
-        If Line Like "Pay Online /*" Then '
-            line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset + 1, 0)
-            Tax = Right(line2, 8)
-            Tax = Replace(Tax, " ", "")
-            'MsgBox "Tax=:" & Tax & ":"
+        If InvoiceDate = "" Or Not InvoiceDate Like "*/*/*" Then
+            InvoiceDate = OrderDate
         End If
+    End If
+    
+    ' DECO PO#
+    If Line Like "*/*/*/*/*" And DecoPO = "" Then
+        DecoPO = Replace(Right(Line, 20), " ", "")
+        If DecoPO = "" Then
+            MsgBox "Error, decoPO is empty."
+            PossibleError = PossibleError + 1
+        End If
+    End If
+    
+    ' Shipping and Handling
+    If UCase(Line) Like "*SHIP*HANDLING*" Then
+        line2 = Replace(Replace(Line, "SHIP/HANDLING", ""), " ", "")
+        If Not line2 Like "*.*" Then line2 = line2 & ".00"
+        If line2 Like "*.[0-9]" Then line2 = line2 & "0"
+        shipping = line2
+    End If
+    
+    ' Total Invoice Amount
+    If Line Like "Pay Online /*" Then
+        For Repeat = 1 To 5
+            line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset + Repeat, 0)
+            If line2 Like "*[0-9]*" Then
+                If Not line2 Like "*.*" Then line2 = line2 & ".00"
+                If line2 Like "*.[0-9]" Then line2 = line2 & "0"
+                TotalInvoice = line2
+            End If
+        Next Repeat
+        
+        ' Refine / filter Total Invoice
+        If Len(TotalInvoice) > 8 Or TotalInvoice Like "*[a-zA-Z]*" Then
+            TotalInvoice = "0.00"
+        End If
+    End If
+    
+    ' Tax
+    If Line Like "Pay Online /*" Then
+        line2 = Workbooks(XLSname).Sheets(1).Range("A1").Offset(xoffset + 1, 0)
+        Tax = Replace(Right(line2, 8), " ", "")
+    End If
 
 Next xoffset
 
@@ -565,7 +504,6 @@ Next xoffset
     
 'Check if PO conforms before bothering to Enter
     TargetPO = DecoPO
-      
     Call CheckPONumber(TargetPO, Found)
 
 'special circumstance
@@ -669,8 +607,8 @@ Next xoffset
     
     
 
-    If Possibleerror > 0 Or Fail > 2 Then MsgBox "Did not attempt to enter " & fname & Chr(13) & "Due to detected error in scraping data" & _
-    Chr(13) & "Variables:" & Chr(13) & "PossibleError->" & Possibleerror & Chr(13) & "Fail->" & Fail
+    If PossibleError > 0 Or Fail > 2 Then MsgBox "Did not attempt to enter " & fname & Chr(13) & "Due to detected error in scraping data" & _
+    Chr(13) & "Variables:" & Chr(13) & "PossibleError->" & PossibleError & Chr(13) & "Fail->" & Fail
 
 End Sub
 Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname, emailmessage):
@@ -762,7 +700,7 @@ Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname,
 ' Reset variables
     tempsheetoffset = 0
     InvoiceDate = ""
-    Possibleerror = 0
+    PossibleError = 0
     TotalInvoice = ""
     yoffset = 0
 
@@ -869,11 +807,11 @@ Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname,
                  If Left(itemDesc, 1) = " " Then itemDesc = Right(itemDesc, Len(itemDesc - 1))
                  If Left(itemDesc, 1) = "," Then itemDesc = Right(itemDesc, Len(itemDesc - 1))
                  'remove problematic symbols
-                 itemDesc = Replace(itemDesc, "°", "")
+                 itemDesc = Replace(itemDesc, "Â°", "")
                  itemDesc = Replace(itemDesc, Chr(173), "")
                  If Len(itemDesc) > 60 Then ItemDec = Left(itemDesc, 60)
                  If itemDesc Like "1000*" Then MsgBox "PLATT WEBSCRAPER ERROR, description seems to be quantity" & Chr(13) & "Description->" & itemDesc
-                 If itemDesc = "" Then Possibleerror = Possibleerror + 1
+                 If itemDesc = "" Then PossibleError = PossibleError + 1
                  'MsgBox "ItemDesc=:" & ItemDesc
     
                 ' Vendor Item No. (vendoritemno)
@@ -898,7 +836,7 @@ Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname,
                  Unit = Replace(Unit, "(100 FT)", "")
                  Unit = Replace(Unit, " ", "")
                  
-                 If Unit Like "*E*E*" Then Possibleerror = Possibleerror + 1 'idicates that rows are combined in excel conversion
+                 If Unit Like "*E*E*" Then PossibleError = PossibleError + 1 'idicates that rows are combined in excel conversion
                  For re = 0 To 15
                      If Left(Unit, 1) Like "[0-9]" Or Left(Unit, 1) Like "/" Or Left(Unit, 1) Like "." _
                      Or Left(Unit, 1) Like "$" Then Unit = Right(Unit, Len(Unit) - 1)
@@ -959,7 +897,7 @@ Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname,
                  If unitprice Like "*[A-Z]*" Then unitprice = "0"
                  'MsgBox "UnitPrice=:" & unitprice & ":"
                  
-                'LINE TOTAL ref: Pre-tax Total: $27.35
+                'LINE TOTAL ref: Pre-tax Total:Â $27.35
                 For y = 0 To 6
                      If ws.Range("BA2").Offset(xoffset + y, 0) Like "*Pre-tax Total:*" Then
                         'MsgBox "found line total"
@@ -1064,7 +1002,7 @@ Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname,
             
 
 'If TargetPO is acceptable, ENTER in SAGE, Move File
-    If Found = 1 And Possibleerror < 1 Then
+    If Found = 1 And PossibleError < 1 Then
         Application.Wait (Now + TimeValue("00:00:01"))
         Application.SendKeys ("^w")
         Application.Wait (Now + TimeValue("00:00:01"))
@@ -1131,7 +1069,7 @@ Sub PlattWebscrape(Fail, fpath, TargetPO, docno, PDFtype, shipping, path, fname,
         Else
     
     
-        MsgBox "Did not enter-> " & fname & Chr(13) & "TargetPO->" & TargetPO & Chr(13) & "PossibleErrors =" & Possibleerror _
+        MsgBox "Did not enter-> " & fname & Chr(13) & "TargetPO->" & TargetPO & Chr(13) & "PossibleErrors =" & PossibleError _
         & Chr(13) & "Found =" & Found
     
     End If
