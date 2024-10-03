@@ -1,4 +1,3 @@
-Attribute VB_Name = "M19SageEnterInvoice"
 
 'Declare mouse events
 Public Declare PtrSafe Function SetCursorPos Lib "User32" (ByVal x As Long, ByVal y As Long) As Long
@@ -11,7 +10,7 @@ Declare PtrSafe Function GetSystemMetrics32 Lib "User32" _
 () '-----------------------------------------------------------------
 Option Compare Text
 
-Sub SageEnterINVOICEfromTEMP(xoffset As Long, emailmessage As String, fpath As String)
+Sub SageEnterINVOICEfromTEMP(xoffset, emailmessage, fpath)
     Dim sourcePath As String
     Dim fname As String
     Dim fso As Object
@@ -733,12 +732,21 @@ End If
     End If
 
     
-'Error check discount date
-    If UCase(DiscountDate) Like "*[A-Z]*" Then
+' Error check and remove letters from DiscountDate
+DiscountDate = UCase(DiscountDate)
+    
+    ' Remove any letters from A-Z
+    For i = 65 To 90 ' ASCII values for A-Z
+        DiscountDate = Replace(DiscountDate, Chr(i), "")
+    Next i
+    
+    ' If DiscountDate still has non-numeric characters, display an error
+    If Not IsNumeric(DiscountDate) Then
         For Repeat = 1 To 10
-            MsgBox "ERROR discount date has letters in it!"
+            MsgBox "ERROR: Discount date has invalid characters in it!"
         Next Repeat
     End If
+
     
 'Enter Discount Date, hit Enter
     Application.Wait (Now + TimeValue("00:00:01"))
